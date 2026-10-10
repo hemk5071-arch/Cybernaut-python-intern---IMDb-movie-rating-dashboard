@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cineo – IMDb Top 250</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <main class="page-shell">
+    <header class="hero">
+      <a class="brand" href="{{ url_for('index') }}"><span class="brand-mark">C</span> Cineo</a>
+      <p class="eyebrow">The greatest stories, ranked</p>
+      <h1>Cineo <span>– IMDb Top 250</span></h1>
+      <p class="updated">Last updated: {{ last_updated }}</p>
+    </header>
+
+    <section class="summary-grid" aria-label="Movie list summary">
+      <article class="summary-card"><span>Total movies</span><strong>{{ total }}</strong></article>
+      <article class="summary-card"><span>Average rating</span><strong>{{ average_rating }}<small>/10</small></strong></article>
+      <article class="summary-card"><span>Highest-rated</span><strong class="highlight">{{ highest_label }}</strong></article>
+      <article class="summary-card"><span>Most common decade</span><strong>{{ most_common_decade }}</strong></article>
+    </section>
+
+    <section class="toolbar" aria-label="Search and filters">
+      <form method="get" action="{{ url_for('index') }}" class="filters">
+        <label class="search-field">
+          <span class="sr-only">Search titles</span>
+          <input type="search" name="q" value="{{ query }}" placeholder="Search a movie title">
+        </label>
+        <label>From year<input type="number" name="min_year" value="{{ min_year or '' }}" min="1888" max="2100"></label>
+        <label>To year<input type="number" name="max_year" value="{{ max_year or '' }}" min="1888" max="2100"></label>
+        <label>Min rating<input type="number" name="min_rating" value="{{ min_rating or '' }}" min="0" max="10" step="0.1"></label>
+        <button class="button primary" type="submit">Apply filters</button>
+        <a class="button secondary" href="{{ url_for('index') }}">Clear</a>
+      </form>
+      <a class="button download" href="{{ download_url }}">↓ Download CSV</a>
+    </section>
+
+    <section class="chart-panel">
+      <div>
+        <p class="eyebrow">Across the decades</p>
+        <h2>Movies by decade</h2>
+      </div>
+      <div class="chart-wrap"><canvas id="decade-chart" aria-label="Movies per decade"></canvas></div>
+    </section>
+
+    <section class="table-panel">
+      <div class="table-heading">
+        <div><p class="eyebrow">Curated classics</p><h2>Top movies</h2></div>
+        <span class="result-count">{{ movies|length }} results</span>
+      </div>
+      {% if movies %}
+      <div class="table-scroll">
+        <table>
+          <thead><tr>
+            {% for key, label in [('rank', '#'), ('title', 'Title'), ('year', 'Year'), ('imdb_rating', 'Rating')] %}
+            {% set next_order = 'desc' if sort == key and order == 'asc' else 'asc' %}
+            <th class="{{ 'numeric' if key != 'title' else '' }}">
+              <a href="{{ url_for('index', q=query, min_year=min_year, max_year=max_year, min_rating=min_rating, sort=key, order=next_order) }}">
+                {{ label }}{% if sort == key %}<span class="sort-indicator">{{ '↑' if order == 'asc' else '↓' }}</span>{% endif %}
+              </a>
+            </th>
+            {% endfor %}
+            <th class="numeric">Votes</th>
+          </tr></thead>
+          <tbody>
+            {% for movie in movies %}
+            <tr>
+              <td class="rank-cell">{{ movie.get('rank', '—')|int if movie.get('rank') is not none else '—' }}</td>
+              <td class="title-cell">
+                {% if movie.get('movie_url') %}<a href="{{ movie.get('movie_url') }}" target="_blank" rel="noopener noreferrer">{{ movie.get('title') or 'Untitled' }}</a>
+                {% else %}{{ movie.get('title') or 'Untitled' }}{% endif %}
+              </td>
+              <td class="numeric">{{ movie.get('year', '—')|int if movie.get('year') is not none else '—' }}</td>
+              <td class="numeric rating-cell">{{ '%.1f'|format(movie.get('imdb_rating')) if movie.get('imdb_rating') is not none else '—' }}</td>
+              <td class="numeric">{{ '{:,}'.format(movie.get('votes')|int) if movie.get('votes') is not none else '—' }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty-state">
+        {% if total == 0 %}<h3>No Cineo data yet</h3><p>Run <code>python main.py</code> to create <code>data/latest.csv</code>.</p>
+        {% else %}<h3>No matches</h3><p>Try a broader search or clear the filters.</p>{% endif %}
+      </div>
+      {% endif %}
+    </section>
+    <footer>For movie fans. Data sourced from IMDb; use responsibly.</footer>
+  </main>
+  <script>
+    const chartLabels = {{ decade_labels|tojson }};
+    const chartValues = {{ decade_values|tojson }};
+    const chartCanvas = document.getElementById("decade-chart");
+    if (chartCanvas && chartValues.length) {
+      new Chart(chartCanvas, {
+        type: "bar",
+        data: { labels: chartLabels, datasets: [{
+          data: chartValues, backgroundColor: "#f5c518", borderRadius: 6, maxBarThickness: 42
+        }] },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { display: false }, ticks: { color: "#a9a9b4" } },
+            y: { beginAtZero: true, grid: { color: "#292a33" }, ticks: { color: "#a9a9b4", precision: 0 } }
+          }
+        }
+      });
+    }
+  </script>
+</body>
+</html>
+

@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+
+# Local configuration and logs
+.env
+logs/*
+!logs/.gitkeep
+
+# Generated scrape output
+data/*
+!data/.gitkeep
+
+# Test/tool caches
+.pytest_cache/
+.coverage
+htmlcov/
+.idea/
+.vscode/
+
